@@ -57,7 +57,7 @@ public abstract class AdsService {
 	protected void executa() {
 		AdWordsSession session;
 		try {
-			setProxy();
+			//setProxy();
 			// Generate a refreshable OAuth2 credential.
 			Credential oAuth2Credential = new OfflineCredentials.Builder()
 					.forApi(Api.ADWORDS).fromFile().build()
