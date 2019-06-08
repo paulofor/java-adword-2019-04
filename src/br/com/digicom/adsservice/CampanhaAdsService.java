@@ -107,6 +107,7 @@ public class CampanhaAdsService extends AdsService {
 	    networkSetting.setTargetSearchNetwork(true);
 	    networkSetting.setTargetContentNetwork(false);
 	    networkSetting.setTargetPartnerSearchNetwork(false);
+	    
 	    campaign.setNetworkSetting(networkSetting);
 		
 		campaign.setBiddingStrategyConfiguration(biddingStrategyConfiguration);
@@ -165,12 +166,53 @@ public class CampanhaAdsService extends AdsService {
 			CampaignCriterion campaignCriterionDevice = new CampaignCriterion();
 			campaignCriterionDevice.setCampaignId(idCampanha);
 			campaignCriterionDevice.setCriterion(mobile);
-			campaignCriterionDevice.setBidModifier(0.10);
+			campaignCriterionDevice.setBidModifier(0.00);
 			CampaignCriterionOperation operation = new CampaignCriterionOperation();
 			operation.setOperand(campaignCriterionDevice);
 			operation.setOperator(Operator.SET);
 			operations.add(operation);
 		}
+		if ("Android".equals(this.campanha.getSetupCampanha().getPlataforma())) {
+			Platform item0 = new Platform();
+			item0.setId(30000L);
+			CampaignCriterion campaignCriterionDevice0 = new CampaignCriterion();
+			campaignCriterionDevice0.setCampaignId(idCampanha);
+			campaignCriterionDevice0.setCriterion(item0);
+			campaignCriterionDevice0.setBidModifier(0.00);
+			
+			CampaignCriterionOperation operation0 = new CampaignCriterionOperation();
+			operation0.setOperand(campaignCriterionDevice0);
+			operation0.setOperator(Operator.SET);
+			operations.add(operation0);
+			
+			Platform item1 = new Platform();
+			item1.setId(30002L);
+			CampaignCriterion campaignCriterionDevice1 = new CampaignCriterion();
+			campaignCriterionDevice1.setCampaignId(idCampanha);
+			campaignCriterionDevice1.setCriterion(item1);
+			campaignCriterionDevice1.setBidModifier(0.00);
+			
+			CampaignCriterionOperation operation1 = new CampaignCriterionOperation();
+			operation1.setOperand(campaignCriterionDevice1);
+			operation1.setOperator(Operator.SET);
+			operations.add(operation1);
+			
+			/*
+			Platform item2 = new Platform();
+			item2.setId(630337L);
+			CampaignCriterion campaignCriterionDevice2 = new CampaignCriterion();
+			campaignCriterionDevice2.setCampaignId(idCampanha);
+			campaignCriterionDevice2.setCriterion(item2);
+			campaignCriterionDevice2.setBidModifier(0.00);
+			
+			CampaignCriterionOperation operation2 = new CampaignCriterionOperation();
+			operation2.setOperand(campaignCriterionDevice2);
+			operation2.setOperator(Operator.SET);
+			operations.add(operation2);
+			*/
+		}
+		
+		
 		CampaignCriterionReturnValue result = campaignCriterionService
 				.mutate((CampaignCriterionOperation[]) operations.toArray(new CampaignCriterionOperation[operations
 						.size()]));

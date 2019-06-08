@@ -16,6 +16,15 @@ public class IntegracaoMundo {
 
 	RestAdapter adapter = new RestAdapter("http://validacao.kinghost.net:21101/api");
 
+	public void criaCampanhaSemSalvar(CampanhaAds campanha) {
+		CampanhaAdsService servico = new CampanhaAdsService();
+		servico.cria(campanha);
+		//campanha.resetSetupCampanha();
+	}
+
+	
+	
+	
 	public void criaCampanha(List<CampanhaAds> objects) {
 		CampanhaAdsService servico = new CampanhaAdsService();
 		for (CampanhaAds campanha : objects) {
