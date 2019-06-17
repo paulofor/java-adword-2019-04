@@ -3,6 +3,7 @@ package br.com.digicom.adsservice;
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -31,6 +32,7 @@ import com.google.api.ads.adwords.axis.v201809.cm.BiddingStrategyConfiguration;
 import com.google.api.ads.adwords.axis.v201809.cm.BiddingStrategyType;
 import com.google.api.ads.adwords.axis.v201809.cm.Bids;
 import com.google.api.ads.adwords.axis.v201809.cm.Budget;
+import com.google.api.ads.adwords.axis.v201809.cm.BudgetBudgetDeliveryMethod;
 import com.google.api.ads.adwords.axis.v201809.cm.BudgetOperation;
 import com.google.api.ads.adwords.axis.v201809.cm.BudgetServiceInterface;
 import com.google.api.ads.adwords.axis.v201809.cm.Campaign;
@@ -46,16 +48,21 @@ import com.google.api.ads.adwords.axis.v201809.cm.CpcBid;
 import com.google.api.ads.adwords.axis.v201809.cm.Criterion;
 import com.google.api.ads.adwords.axis.v201809.cm.ExpandedTextAd;
 import com.google.api.ads.adwords.axis.v201809.cm.GeoTargetTypeSetting;
+import com.google.api.ads.adwords.axis.v201809.cm.GeoTargetTypeSettingNegativeGeoTargetType;
 import com.google.api.ads.adwords.axis.v201809.cm.GeoTargetTypeSettingPositiveGeoTargetType;
 import com.google.api.ads.adwords.axis.v201809.cm.Keyword;
 import com.google.api.ads.adwords.axis.v201809.cm.KeywordMatchType;
 import com.google.api.ads.adwords.axis.v201809.cm.Language;
 import com.google.api.ads.adwords.axis.v201809.cm.Location;
+import com.google.api.ads.adwords.axis.v201809.cm.MobileApplicationVendor;
 import com.google.api.ads.adwords.axis.v201809.cm.Money;
 import com.google.api.ads.adwords.axis.v201809.cm.NetworkSetting;
 import com.google.api.ads.adwords.axis.v201809.cm.Operator;
 import com.google.api.ads.adwords.axis.v201809.cm.Platform;
 import com.google.api.ads.adwords.axis.v201809.cm.Setting;
+import com.google.api.ads.adwords.axis.v201809.cm.TargetCpaBiddingScheme;
+import com.google.api.ads.adwords.axis.v201809.cm.UniversalAppBiddingStrategyGoalType;
+import com.google.api.ads.adwords.axis.v201809.cm.UniversalAppCampaignSetting;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.adwords.lib.factory.AdWordsServicesInterface;
 import com.google.api.ads.adwords.lib.utils.examples.ArgumentNames;
@@ -66,33 +73,15 @@ import br.com.digicom.modelo.CampanhaAds;
 import br.com.digicom.modelo.CampanhaAnuncioResultado;
 import br.com.digicom.modelo.CampanhaPalavraChaveResultado;
 
-public class CampanhaAdsService extends AdsService {
+public class CampanhaAplicacaoService extends AdsService {
 
 	private CampanhaAds campanha = null;
 
 	@Override
-	protected void runExample(AdWordsServicesInterface adWordsServices, AdWordsSession session) throws RemoteException,
-			ApiException {
+	protected void runExample(AdWordsServicesInterface adWordsServices, AdWordsSession session)
+			throws RemoteException, ApiException {
 
 		CampaignServiceInterface campaignService = adWordsServices.get(session, CampaignServiceInterface.class);
-
-		// BiddingStrategyConfiguration
-		BiddingStrategyConfiguration biddingStrategyConfiguration = new BiddingStrategyConfiguration();
-		BiddingStrategyType tipoEstrategia = BiddingStrategyType.fromString(this.campanha.getSetupCampanha()
-				.getEstrategia());
-		biddingStrategyConfiguration.setBiddingStrategyType(tipoEstrategia);
-
-		// Money
-		Money budgetAmount = new Money();
-		Long valor = (long) (this.campanha.getSetupCampanha().getBudgetDiario() * 1000000);
-		budgetAmount.setMicroAmount(valor);
-
-		// Budget
-		Budget budget = new Budget();
-		budget.setAmount(budgetAmount);
-		budget.setIsExplicitlyShared(false);
-		Long budgetId = this.criaBudget(budget, adWordsServices, session);
-		budget.setBudgetId(budgetId);
 
 		// Campaign
 		Campaign campaign = new Campaign();
@@ -100,124 +89,250 @@ public class CampanhaAdsService extends AdsService {
 		campaign.setStatus(CampaignStatus.PAUSED);
 		campaign.setStartDate(this.converteData(this.getDataInicial()));
 		campaign.setEndDate(this.converteData(this.getDataFinal()));
-		campaign.setAdvertisingChannelType(AdvertisingChannelType.SEARCH);
+		campaign.setAdvertisingChannelType(AdvertisingChannelType.MULTI_CHANNEL);
+		campaign.setAdvertisingChannelSubType(AdvertisingChannelSubType.UNIVERSAL_APP_CAMPAIGN);
 
-		
-		 // Set the campaign network options to Search and Search Network.
-	    NetworkSetting networkSetting = new NetworkSetting();
-	    networkSetting.setTargetGoogleSearch(true);
-	    networkSetting.setTargetSearchNetwork(true);
-	    networkSetting.setTargetContentNetwork(false);
-	    networkSetting.setTargetPartnerSearchNetwork(false);
-	    
-	    campaign.setNetworkSetting(networkSetting);
-		
-		campaign.setBiddingStrategyConfiguration(biddingStrategyConfiguration);
-		campaign.setBudget(budget);
+		// Set the campaign's bidding strategy. universal app campaigns
+		// only support TARGET_CPA bidding strategy.
+		BiddingStrategyConfiguration biddingConfig = new BiddingStrategyConfiguration();
+		biddingConfig.setBiddingStrategyType(BiddingStrategyType.TARGET_CPA);
 
-		// Localizacao
-		GeoTargetTypeSetting geoTarget = new GeoTargetTypeSetting();
-		geoTarget.setPositiveGeoTargetType(GeoTargetTypeSettingPositiveGeoTargetType.LOCATION_OF_PRESENCE);
-		campaign.setSettings(new Setting[] { geoTarget });
+		// Set the target CPA to $1 / app install.
+		TargetCpaBiddingScheme biddingScheme = new TargetCpaBiddingScheme();
+		biddingScheme.setTargetCpa(new Money());
+		biddingScheme.getTargetCpa().setMicroAmount(1000000L);
 
+		biddingConfig.setBiddingScheme(biddingScheme);
+		campaign.setBiddingStrategyConfiguration(biddingConfig);
+
+		// Set the campaign's budget.
+		campaign.setBudget(new Budget());
+		campaign.getBudget().setBudgetId(createBudget(adWordsServices, session));
+
+		// Set the campaign's assets and ad text ideas. These values will be used to
+		// generate ads.
+		UniversalAppCampaignSetting universalAppSetting = new UniversalAppCampaignSetting();
+		universalAppSetting.setAppId("com.labpixies.colordrips");
+		universalAppSetting.setAppVendor(MobileApplicationVendor.VENDOR_GOOGLE_MARKET);
+		universalAppSetting.setDescription1("A cool puzzle game");
+		universalAppSetting.setDescription2("Remove connected blocks");
+		universalAppSetting.setDescription3("3 difficulty levels");
+		universalAppSetting.setDescription4("4 colorful fun skins");
+
+		// Optional: You can set up to 20 image assets for your campaign.
+		// See UploadImage.java for an example on how to upload images.
+		//
+		// universalAppSetting.setImageMediaIds(new long[] { INSERT_IMAGE_MEDIA_ID_HERE
+		// });
+
+		// Optimize this campaign for getting new users for your app.
+		universalAppSetting.setUniversalAppBiddingStrategyGoalType(
+				UniversalAppBiddingStrategyGoalType.OPTIMIZE_FOR_INSTALL_CONVERSION_VOLUME);
+
+		// If you select the OPTIMIZE_FOR_IN_APP_CONVERSION_VOLUME goal type, then also
+		// specify
+		// your in-app conversion types so AdWords can focus your campaign on people who
+		// are
+		// most likely to complete the corresponding in-app actions.
+		// Conversion type IDs can be retrieved using ConversionTrackerService.get.
+		//
+		// campaign.selectiveOptimization = new SelectiveOptimization();
+		// campaign.selectiveOptimization.conversionTypeIds =
+		// new long[] { INSERT_CONVERSION_TYPE_ID_1_HERE,
+		// INSERT_CONVERSION_TYPE_ID_2_HERE };
+
+		// Optional: Set the campaign settings for Advanced location options.
+		GeoTargetTypeSetting geoSetting = new GeoTargetTypeSetting();
+		geoSetting.setPositiveGeoTargetType(GeoTargetTypeSettingPositiveGeoTargetType.LOCATION_OF_PRESENCE);
+		geoSetting.setNegativeGeoTargetType(GeoTargetTypeSettingNegativeGeoTargetType.DONT_CARE);
+
+		campaign.setSettings(new Setting[] { universalAppSetting, geoSetting });
+
+		// Create the operation.
 		CampaignOperation operation = new CampaignOperation();
 		operation.setOperand(campaign);
 		operation.setOperator(Operator.ADD);
+
 		CampaignOperation[] operations = new CampaignOperation[] { operation };
+
+		// Add the campaign.
 		CampaignReturnValue result = campaignService.mutate(operations);
-		for (Campaign campaignResult : result.getValue()) {
-			System.out.printf("Campanha com nome '%s' e ID %d foi criada.%n", campaignResult.getName(),
-					campaignResult.getId());
-			this.criaSegmentacaoLocal(campaignResult.getId(), adWordsServices, session);
-			this.criarGrupoAnuncio(campanha, campaignResult.getId(), adWordsServices, session);
-			campanha.setIdAds("" + campaignResult.getId());
-			campanha.setDataInicial(this.converteDataInicioDia(this.getDataInicial()));
-			campanha.setDataFinal(this.converteDataFinalDia(this.getDataFinal()));
+
+		// Display the results.
+		for (Campaign newCampaign : result.getValue()) {
+			System.out.printf("Universal app campaign with name '%s' and ID %d was added.%n", newCampaign.getName(),
+					newCampaign.getId());
+
+			// Optional: Set the campaign's location and language targeting. No other
+			// targeting
+			// criteria can be used for universal app campaigns.
+			setCampaignTargetingCriteria(newCampaign, adWordsServices, session);
 		}
 
+		/*
+		 * 
+		 * 
+		 * 
+		 * 
+		 * 
+		 * 
+		 * // Localizacao GeoTargetTypeSetting geoTarget = new GeoTargetTypeSetting();
+		 * geoTarget.setPositiveGeoTargetType(GeoTargetTypeSettingPositiveGeoTargetType.
+		 * LOCATION_OF_PRESENCE); campaign.setSettings(new Setting[] { geoTarget });
+		 * 
+		 * CampaignOperation operation = new CampaignOperation();
+		 * operation.setOperand(campaign); operation.setOperator(Operator.ADD);
+		 * CampaignOperation[] operations = new CampaignOperation[] { operation };
+		 * CampaignReturnValue result = campaignService.mutate(operations); for
+		 * (Campaign campaignResult : result.getValue()) {
+		 * System.out.printf("Campanha com nome '%s' e ID %d foi criada.%n",
+		 * campaignResult.getName(), campaignResult.getId());
+		 * this.criaSegmentacaoLocal(campaignResult.getId(), adWordsServices, session);
+		 * this.criarGrupoAnuncio(campanha, campaignResult.getId(), adWordsServices,
+		 * session); campanha.setIdAds("" + campaignResult.getId());
+		 * campanha.setDataInicial(this.converteDataInicioDia(this.getDataInicial()));
+		 * campanha.setDataFinal(this.converteDataFinalDia(this.getDataFinal())); }
+		 * 
+		 * }
+		 * 
+		 * // Portuguese,pt,1014 private void criaSegmentacaoLocal(Long idCampanha,
+		 * AdWordsServicesInterface adWordsServices, AdWordsSession session) throws
+		 * ApiException, RemoteException { CampaignCriterionServiceInterface
+		 * campaignCriterionService = adWordsServices.get(session,
+		 * CampaignCriterionServiceInterface.class);
+		 * 
+		 * // Create locations. The IDs can be found in the documentation or //
+		 * retrieved with the LocationCriterionService.
+		 * 
+		 * Location pais = new Location(); pais.setId(2076L); Language lingua = new
+		 * Language(); lingua.setId(1014L);
+		 * 
+		 * List operations = new ArrayList(); for (Criterion criterion : new Criterion[]
+		 * { pais, lingua }) { CampaignCriterionOperation operation = new
+		 * CampaignCriterionOperation(); CampaignCriterion campaignCriterion = new
+		 * CampaignCriterion(); campaignCriterion.setCampaignId(idCampanha);
+		 * campaignCriterion.setCriterion(criterion);
+		 * operation.setOperand(campaignCriterion); operation.setOperator(Operator.ADD);
+		 * operations.add(operation); }
+		 * 
+		 * if ("Desktop".equals(this.campanha.getSetupCampanha().getPlataforma())) {
+		 * Platform mobile = new Platform(); mobile.setId(30001L); CampaignCriterion
+		 * campaignCriterionDevice = new CampaignCriterion();
+		 * campaignCriterionDevice.setCampaignId(idCampanha);
+		 * campaignCriterionDevice.setCriterion(mobile);
+		 * campaignCriterionDevice.setBidModifier(0.00); CampaignCriterionOperation
+		 * operation = new CampaignCriterionOperation();
+		 * operation.setOperand(campaignCriterionDevice);
+		 * operation.setOperator(Operator.SET); operations.add(operation); } if
+		 * ("Android".equals(this.campanha.getSetupCampanha().getPlataforma())) {
+		 * Platform item0 = new Platform(); item0.setId(30000L); CampaignCriterion
+		 * campaignCriterionDevice0 = new CampaignCriterion();
+		 * campaignCriterionDevice0.setCampaignId(idCampanha);
+		 * campaignCriterionDevice0.setCriterion(item0);
+		 * campaignCriterionDevice0.setBidModifier(0.00);
+		 * 
+		 * CampaignCriterionOperation operation0 = new CampaignCriterionOperation();
+		 * operation0.setOperand(campaignCriterionDevice0);
+		 * operation0.setOperator(Operator.SET); operations.add(operation0);
+		 * 
+		 * Platform item1 = new Platform(); item1.setId(30002L); CampaignCriterion
+		 * campaignCriterionDevice1 = new CampaignCriterion();
+		 * campaignCriterionDevice1.setCampaignId(idCampanha);
+		 * campaignCriterionDevice1.setCriterion(item1);
+		 * campaignCriterionDevice1.setBidModifier(0.00);
+		 * 
+		 * CampaignCriterionOperation operation1 = new CampaignCriterionOperation();
+		 * operation1.setOperand(campaignCriterionDevice1);
+		 * operation1.setOperator(Operator.SET); operations.add(operation1);
+		 * 
+		 * }
+		 * 
+		 * 
+		 * CampaignCriterionReturnValue result = campaignCriterionService
+		 * .mutate((CampaignCriterionOperation[]) operations.toArray(new
+		 * CampaignCriterionOperation[operations .size()]));
+		 */
 	}
 
-	// Portuguese,pt,1014
-	private void criaSegmentacaoLocal(Long idCampanha, AdWordsServicesInterface adWordsServices, AdWordsSession session)
-			throws ApiException, RemoteException {
+	/** Sets the campaign's targeting criteria. */
+	private void setCampaignTargetingCriteria(Campaign campaign, AdWordsServicesInterface adWordsServices,
+			AdWordsSession session) throws ApiException, RemoteException {
+		// Get the CampaignCriterionService.
 		CampaignCriterionServiceInterface campaignCriterionService = adWordsServices.get(session,
 				CampaignCriterionServiceInterface.class);
 
 		// Create locations. The IDs can be found in the documentation or
 		// retrieved with the LocationCriterionService.
+		Location california = new Location();
+		california.setId(21137L);
 
-		Location pais = new Location();
-		pais.setId(2076L);
-		Language lingua = new Language();
-		lingua.setId(1014L);
+		Location mexico = new Location();
+		mexico.setId(2484L);
 
-		List operations = new ArrayList();
-		for (Criterion criterion : new Criterion[] { pais, lingua }) {
+		// Create languages. The IDs can be found in the documentation or
+		// retrieved with the ConstantDataService.
+		Language english = new Language();
+		english.setId(1000L);
+
+		Language spanish = new Language();
+		spanish.setId(1003L);
+
+		List<Criterion> criteria = new ArrayList<>(Arrays.asList(california, mexico, english, spanish));
+
+		// Create operations to add each of the criteria above.
+		List<CampaignCriterionOperation> operations = new ArrayList<>();
+		for (Criterion criterion : criteria) {
 			CampaignCriterionOperation operation = new CampaignCriterionOperation();
+
 			CampaignCriterion campaignCriterion = new CampaignCriterion();
-			campaignCriterion.setCampaignId(idCampanha);
+			campaignCriterion.setCampaignId(campaign.getId());
 			campaignCriterion.setCriterion(criterion);
 			operation.setOperand(campaignCriterion);
+
 			operation.setOperator(Operator.ADD);
+
 			operations.add(operation);
 		}
 
-		if ("Desktop".equals(this.campanha.getSetupCampanha().getPlataforma())) {
-			Platform mobile = new Platform();
-			mobile.setId(30001L);
-			CampaignCriterion campaignCriterionDevice = new CampaignCriterion();
-			campaignCriterionDevice.setCampaignId(idCampanha);
-			campaignCriterionDevice.setCriterion(mobile);
-			campaignCriterionDevice.setBidModifier(0.00);
-			CampaignCriterionOperation operation = new CampaignCriterionOperation();
-			operation.setOperand(campaignCriterionDevice);
-			operation.setOperator(Operator.SET);
-			operations.add(operation);
+		// Set the campaign targets.
+		CampaignCriterionReturnValue returnValue = campaignCriterionService
+				.mutate(operations.toArray(new CampaignCriterionOperation[operations.size()]));
+
+		if (returnValue != null && returnValue.getValue() != null) {
+			// Display added campaign targets.
+			for (CampaignCriterion campaignCriterion : returnValue.getValue()) {
+				System.out.printf("Campaign criteria of type '%s' and ID %d was added.%n",
+						campaignCriterion.getCriterion().getCriterionType(), campaignCriterion.getCriterion().getId());
+			}
 		}
-		if ("Android".equals(this.campanha.getSetupCampanha().getPlataforma())) {
-			Platform item0 = new Platform();
-			item0.setId(30000L);
-			CampaignCriterion campaignCriterionDevice0 = new CampaignCriterion();
-			campaignCriterionDevice0.setCampaignId(idCampanha);
-			campaignCriterionDevice0.setCriterion(item0);
-			campaignCriterionDevice0.setBidModifier(0.00);
-			
-			CampaignCriterionOperation operation0 = new CampaignCriterionOperation();
-			operation0.setOperand(campaignCriterionDevice0);
-			operation0.setOperator(Operator.SET);
-			operations.add(operation0);
-			
-			Platform item1 = new Platform();
-			item1.setId(30002L);
-			CampaignCriterion campaignCriterionDevice1 = new CampaignCriterion();
-			campaignCriterionDevice1.setCampaignId(idCampanha);
-			campaignCriterionDevice1.setCriterion(item1);
-			campaignCriterionDevice1.setBidModifier(0.00);
-			
-			CampaignCriterionOperation operation1 = new CampaignCriterionOperation();
-			operation1.setOperand(campaignCriterionDevice1);
-			operation1.setOperator(Operator.SET);
-			operations.add(operation1);
-			
-			/*
-			Platform item2 = new Platform();
-			item2.setId(630337L);
-			CampaignCriterion campaignCriterionDevice2 = new CampaignCriterion();
-			campaignCriterionDevice2.setCampaignId(idCampanha);
-			campaignCriterionDevice2.setCriterion(item2);
-			campaignCriterionDevice2.setBidModifier(0.00);
-			
-			CampaignCriterionOperation operation2 = new CampaignCriterionOperation();
-			operation2.setOperand(campaignCriterionDevice2);
-			operation2.setOperator(Operator.SET);
-			operations.add(operation2);
-			*/
-		}
-		
-		
-		CampaignCriterionReturnValue result = campaignCriterionService
-				.mutate((CampaignCriterionOperation[]) operations.toArray(new CampaignCriterionOperation[operations
-						.size()]));
+	}
+
+	private Long createBudget(AdWordsServicesInterface adWordsServices, AdWordsSession session)
+			throws RemoteException, ApiException {
+		// Get the BudgetService.
+		BudgetServiceInterface budgetService = adWordsServices.get(session, BudgetServiceInterface.class);
+
+		// Create the campaign budget.
+		Budget budget = new Budget();
+		budget.setName("Interplanetary Cruise App Budget #" + System.currentTimeMillis());
+
+		// Money
+		Money budgetAmount = new Money();
+		Long valor = (long) (this.campanha.getSetupCampanha().getBudgetDiario() * 1000000);
+
+		budgetAmount.setMicroAmount(valor);
+		budget.setAmount(budgetAmount);
+		budget.setDeliveryMethod(BudgetBudgetDeliveryMethod.STANDARD);
+
+		// Universal app campaigns don't support shared budgets.
+		budget.setIsExplicitlyShared(false);
+		BudgetOperation budgetOperation = new BudgetOperation();
+		budgetOperation.setOperand(budget);
+		budgetOperation.setOperator(Operator.ADD);
+
+		// Add the budget
+		Budget addedBudget = budgetService.mutate(new BudgetOperation[] { budgetOperation }).getValue(0);
+		return addedBudget.getBudgetId();
 	}
 
 	private Long criaBudget(Budget budget, AdWordsServicesInterface adWordsServices, AdWordsSession session)
@@ -267,8 +382,7 @@ public class CampanhaAdsService extends AdsService {
 			expandedTextAd.setDescription(anuncio.getAnuncioAds().getDescricao1());
 			expandedTextAd.setFinalUrls(new String[] { campanha.getUrlAlvo() });
 			expandedTextAd.setFinalMobileUrls(new String[] { campanha.getUrlAlvoMobile() });
-			
-			
+
 			// Create ad group ad.
 			AdGroupAd expandedTextAdGroupAd = new AdGroupAd();
 			expandedTextAdGroupAd.setAdGroupId(idGrupo);
@@ -285,7 +399,8 @@ public class CampanhaAdsService extends AdsService {
 			operations.add(adGroupAdOperation);
 		}
 		// Add ads.
-		AdGroupAdReturnValue result = adGroupAdService.mutate(operations.toArray(new AdGroupAdOperation[operations.size()]));
+		AdGroupAdReturnValue result = adGroupAdService
+				.mutate(operations.toArray(new AdGroupAdOperation[operations.size()]));
 
 		// Display ads.
 		int posicao = 0;
@@ -329,16 +444,13 @@ public class CampanhaAdsService extends AdsService {
 			listaOperacao.add(keywordAdGroupCriterionOperation1);
 
 			/*
-			 * Keyword keyword2 = new Keyword();
-			 * keyword2.setText(palavra.getPalavra());
-			 * keyword2.setMatchType(KeywordMatchType.PHRASE);
-			 * BiddableAdGroupCriterion keywordBiddableAdGroupCriterion2 = new
-			 * BiddableAdGroupCriterion();
+			 * Keyword keyword2 = new Keyword(); keyword2.setText(palavra.getPalavra());
+			 * keyword2.setMatchType(KeywordMatchType.PHRASE); BiddableAdGroupCriterion
+			 * keywordBiddableAdGroupCriterion2 = new BiddableAdGroupCriterion();
 			 * keywordBiddableAdGroupCriterion2.setAdGroupId(idGrupo);
 			 * keywordBiddableAdGroupCriterion2.setCriterion(keyword2);
 			 * AdGroupCriterionOperation keywordAdGroupCriterionOperation2 = new
-			 * AdGroupCriterionOperation();
-			 * keywordAdGroupCriterionOperation2.setOperand
+			 * AdGroupCriterionOperation(); keywordAdGroupCriterionOperation2.setOperand
 			 * (keywordBiddableAdGroupCriterion2 );
 			 * keywordAdGroupCriterionOperation2.setOperator(Operator.ADD);
 			 * listaOperacao.add(keywordAdGroupCriterionOperation2);
@@ -359,9 +471,10 @@ public class CampanhaAdsService extends AdsService {
 		// Display results.
 		int posicao = 0;
 		for (AdGroupCriterion adGroupCriterionResult : result.getValue()) {
-			System.out.printf("Keyword ad group criterion with ad group ID %d, criterion ID %d, "
-					+ "text '%s', and match type '%s' was added.%n", adGroupCriterionResult.getAdGroupId(),
-					adGroupCriterionResult.getCriterion().getId(),
+			System.out.printf(
+					"Keyword ad group criterion with ad group ID %d, criterion ID %d, "
+							+ "text '%s', and match type '%s' was added.%n",
+					adGroupCriterionResult.getAdGroupId(), adGroupCriterionResult.getCriterion().getId(),
 					((Keyword) adGroupCriterionResult.getCriterion()).getText(),
 					((Keyword) adGroupCriterionResult.getCriterion()).getMatchType());
 			campanha.getCampanhaPalavraChaveResultados().get(posicao)
@@ -384,17 +497,17 @@ public class CampanhaAdsService extends AdsService {
 		adGroup.setName("Grp_" + this.campanha.getNome() + "_" + System.currentTimeMillis());
 		adGroup.setStatus(AdGroupStatus.ENABLED);
 		adGroup.setCampaignId(idCampanha);
-		
+
 		// Create ad group bid.
 		Long valor = (long) (campanha.getSetupCampanha().getMaxCpcGrupoAnuncio() * 1000000);
-	    BiddingStrategyConfiguration biddingStrategyConfiguration = new BiddingStrategyConfiguration();
-	    Money cpcBidMoney = new Money();
-	    cpcBidMoney.setMicroAmount(valor);
-	    CpcBid bid = new CpcBid();
-	    bid.setBid(cpcBidMoney);
-	    biddingStrategyConfiguration.setBids(new Bids[] {bid});
-	    adGroup.setBiddingStrategyConfiguration(biddingStrategyConfiguration);
-	    
+		BiddingStrategyConfiguration biddingStrategyConfiguration = new BiddingStrategyConfiguration();
+		Money cpcBidMoney = new Money();
+		cpcBidMoney.setMicroAmount(valor);
+		CpcBid bid = new CpcBid();
+		bid.setBid(cpcBidMoney);
+		biddingStrategyConfiguration.setBids(new Bids[] { bid });
+		adGroup.setBiddingStrategyConfiguration(biddingStrategyConfiguration);
+
 		// Set the rotation mode.
 		AdRotationMode tipoRotacao = AdRotationMode.fromString(this.campanha.getSetupCampanha().getRotacaoAnuncio());
 		AdGroupAdRotationMode rotationMode = new AdGroupAdRotationMode(tipoRotacao);
@@ -428,7 +541,8 @@ public class CampanhaAdsService extends AdsService {
 	public Calendar getDataInicial() {
 		Calendar date1 = Calendar.getInstance();
 		date1.add(Calendar.DATE, 1);
-		while (date1.get(Calendar.DAY_OF_WEEK) != this.getPosicaoDia(campanha.getSetupCampanha().getDiaSemanaInicio())) {
+		while (date1.get(Calendar.DAY_OF_WEEK) != this
+				.getPosicaoDia(campanha.getSetupCampanha().getDiaSemanaInicio())) {
 			date1.add(Calendar.DATE, 1);
 		}
 		return date1;
@@ -473,14 +587,12 @@ public class CampanhaAdsService extends AdsService {
 		Calendar date1 = getDataInicial();
 		date1.add(Calendar.DATE, 1);
 
-		while (date1.get(Calendar.DAY_OF_WEEK) != this.getPosicaoDia(this.campanha.getSetupCampanha()
-				.getDiaSemanaFinal())) {
+		while (date1.get(Calendar.DAY_OF_WEEK) != this
+				.getPosicaoDia(this.campanha.getSetupCampanha().getDiaSemanaFinal())) {
 			date1.add(Calendar.DATE, 1);
 		}
 		return date1;
 
 	}
-
-
 
 }
