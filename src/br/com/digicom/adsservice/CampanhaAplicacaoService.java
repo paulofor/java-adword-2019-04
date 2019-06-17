@@ -167,6 +167,7 @@ public class CampanhaAplicacaoService extends AdsService {
 			// targeting
 			// criteria can be used for universal app campaigns.
 			setCampaignTargetingCriteria(newCampaign, adWordsServices, session);
+			
 		}
 
 		/*
@@ -188,10 +189,8 @@ public class CampanhaAplicacaoService extends AdsService {
 		 * System.out.printf("Campanha com nome '%s' e ID %d foi criada.%n",
 		 * campaignResult.getName(), campaignResult.getId());
 		 * this.criaSegmentacaoLocal(campaignResult.getId(), adWordsServices, session);
-		 * this.criarGrupoAnuncio(campanha, campaignResult.getId(), adWordsServices,
-		 * session); campanha.setIdAds("" + campaignResult.getId());
-		 * campanha.setDataInicial(this.converteDataInicioDia(this.getDataInicial()));
-		 * campanha.setDataFinal(this.converteDataFinalDia(this.getDataFinal())); }
+
+
 		 * 
 		 * }
 		 * 
@@ -204,8 +203,10 @@ public class CampanhaAplicacaoService extends AdsService {
 		 * // Create locations. The IDs can be found in the documentation or //
 		 * retrieved with the LocationCriterionService.
 		 * 
-		 * Location pais = new Location(); pais.setId(2076L); Language lingua = new
-		 * Language(); lingua.setId(1014L);
+		 * Location pais = new Location(); 
+		 * pais.setId(2076L); 
+		 * Language lingua = new Language(); 
+		 * lingua.setId(1014L);
 		 * 
 		 * List operations = new ArrayList(); for (Criterion criterion : new Criterion[]
 		 * { pais, lingua }) { CampaignCriterionOperation operation = new
@@ -263,21 +264,13 @@ public class CampanhaAplicacaoService extends AdsService {
 
 		// Create locations. The IDs can be found in the documentation or
 		// retrieved with the LocationCriterionService.
-		Location california = new Location();
-		california.setId(21137L);
+		Location pais = new Location(); 
+		pais.setId(2076L); 
+		Language lingua = new Language(); 
+		lingua.setId(1014L);
 
-		Location mexico = new Location();
-		mexico.setId(2484L);
 
-		// Create languages. The IDs can be found in the documentation or
-		// retrieved with the ConstantDataService.
-		Language english = new Language();
-		english.setId(1000L);
-
-		Language spanish = new Language();
-		spanish.setId(1003L);
-
-		List<Criterion> criteria = new ArrayList<>(Arrays.asList(california, mexico, english, spanish));
+		List<Criterion> criteria = new ArrayList<>(Arrays.asList(pais,lingua));
 
 		// Create operations to add each of the criteria above.
 		List<CampaignCriterionOperation> operations = new ArrayList<>();
@@ -294,6 +287,9 @@ public class CampanhaAplicacaoService extends AdsService {
 			operations.add(operation);
 		}
 
+		
+		
+		
 		// Set the campaign targets.
 		CampaignCriterionReturnValue returnValue = campaignCriterionService
 				.mutate(operations.toArray(new CampaignCriterionOperation[operations.size()]));
