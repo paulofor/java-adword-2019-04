@@ -30,7 +30,7 @@ public class CriaCampanhas {
 			public void onSuccess(List<CampanhaAds> objects) {
 				
 				IntegracaoMundo integra = new IntegracaoMundo();
-				integra.criaCampanha(objects);
+				integra.criaCampanhaLista(objects);
 				
 			} 
         });

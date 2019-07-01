@@ -98,9 +98,14 @@ public class CampanhaAplicacaoService extends AdsService {
 		biddingConfig.setBiddingStrategyType(BiddingStrategyType.TARGET_CPA);
 
 		// Set the target CPA to $1 / app install.
+		Money custoInstalacao = new Money();
+		Long valor = (long) (this.campanha.getSetupCampanha().getCustoInstalacao() * 1000000);
+		custoInstalacao.setMicroAmount(valor);
+			
+		
 		TargetCpaBiddingScheme biddingScheme = new TargetCpaBiddingScheme();
-		biddingScheme.setTargetCpa(new Money());
-		biddingScheme.getTargetCpa().setMicroAmount(1000000L);
+		biddingScheme.setTargetCpa(custoInstalacao);
+		//biddingScheme.getTargetCpa().setMicroAmount(1000000L);
 
 		biddingConfig.setBiddingScheme(biddingScheme);
 		campaign.setBiddingStrategyConfiguration(biddingConfig);
@@ -112,12 +117,17 @@ public class CampanhaAplicacaoService extends AdsService {
 		// Set the campaign's assets and ad text ideas. These values will be used to
 		// generate ads.
 		UniversalAppCampaignSetting universalAppSetting = new UniversalAppCampaignSetting();
-		universalAppSetting.setAppId("com.labpixies.colordrips");
+		universalAppSetting.setAppId(this.campanha.getAnuncioAplicativo().getPacoteApp());
 		universalAppSetting.setAppVendor(MobileApplicationVendor.VENDOR_GOOGLE_MARKET);
-		universalAppSetting.setDescription1("A cool puzzle game");
-		universalAppSetting.setDescription2("Remove connected blocks");
-		universalAppSetting.setDescription3("3 difficulty levels");
-		universalAppSetting.setDescription4("4 colorful fun skins");
+		universalAppSetting.setDescription1(this.campanha.getAnuncioAplicativo().getTitulo1());
+		universalAppSetting.setDescription2(this.campanha.getAnuncioAplicativo().getTitulo2());
+		universalAppSetting.setDescription3(this.campanha.getAnuncioAplicativo().getTitulo3());
+		universalAppSetting.setDescription4(this.campanha.getAnuncioAplicativo().getTitulo4());
+	    //universalAppSetting.setDescription1("A cool puzzle game");
+	    //universalAppSetting.setDescription2("Remove connected blocks");
+	    //universalAppSetting.setDescription3("3 difficulty levels");
+	    //universalAppSetting.setDescription4("4 colorful fun skins");
+
 
 		// Optional: You can set up to 20 image assets for your campaign.
 		// See UploadImage.java for an example on how to upload images.
@@ -167,6 +177,9 @@ public class CampanhaAplicacaoService extends AdsService {
 			// targeting
 			// criteria can be used for universal app campaigns.
 			setCampaignTargetingCriteria(newCampaign, adWordsServices, session);
+			campanha.setIdAds("" + newCampaign.getId());
+			campanha.setDataInicial(this.converteDataInicioDia(this.getDataInicial()));
+			campanha.setDataFinal(this.converteDataFinalDia(this.getDataFinal()));
 			
 		}
 

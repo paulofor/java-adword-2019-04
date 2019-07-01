@@ -31,6 +31,7 @@ public class CampanhaAds extends Model{
 	private Integer paginaValidacaoWebId;
 	private Integer modeloCampanhaId;
 	private Integer setupCampanhaId;
+	private Integer anuncioAplicativoId;
 	
 	private String listaCampanha ;
 	private String urlAlvo;
@@ -45,8 +46,25 @@ public class CampanhaAds extends Model{
 	private Double taxaConversao;
 	
 	
+	private AnuncioAplicativo anuncioAplicativo;
 	
 	
+	
+	
+	
+	public Integer getAnuncioAplicativoId() {
+		return anuncioAplicativoId;
+	}
+
+
+	public void setAnuncioAplicativoId(Integer anuncioAplicativoId) {
+		this.anuncioAplicativoId = anuncioAplicativoId;
+	}
+
+
+	
+
+
 	public Double getCtr() {
 		return ctr;
 	}
@@ -96,20 +114,32 @@ public class CampanhaAds extends Model{
 		this.taxaConversao = taxaConversao;
 	}
 
+	// ** ANUNCIO APLICATIVO **
+	public AnuncioAplicativo getAnuncioAplicativo() {
+		return anuncioAplicativo;
+	}
+	public void setAnuncioAplicativo(Object anuncioAplicativo) {
+		this.anuncioAplicativo = new AnuncioAplicativo();
+		BeanUtil.setProperties(this.anuncioAplicativo, (Map<String, ? extends Object>) anuncioAplicativo, true);
+	}
+	public void resetAnuncioAplicativo() {
+		this.anuncioAplicativo = null;
+	}
+	
 
+	// ** SETUP CAMPANHA **
 	public SetupCampanha getSetupCampanha() {
 		return setupCampanha;
 	}
-
-
 	public void setSetupCampanha(Object setupCampanha) {
 		this.setupCampanha = new SetupCampanha();
 		BeanUtil.setProperties(this.setupCampanha, (Map<String, ? extends Object>) setupCampanha, true);
 	}
-	
 	public void resetSetupCampanha() {
 		this.setupCampanha = null;
 	}
+
+	
 	
 	public List<CampanhaPalavraChaveResultado> getCampanhaPalavraChaveResultados() {
 		return campanhaPalavraChaveResultados;

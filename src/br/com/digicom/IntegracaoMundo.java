@@ -20,37 +20,61 @@ public class IntegracaoMundo {
 	public void criaCampanhaSemSalvar(CampanhaAds campanha) {
 		CampanhaAdsService servico = new CampanhaAdsService();
 		servico.cria(campanha);
-		//campanha.resetSetupCampanha();
+		// campanha.resetSetupCampanha();
+	}
+
+	public void criaCampanhaLista(List<CampanhaAds> objects) {
+		for (CampanhaAds campanha : objects) {
+			if (campanha.getAnuncioAplicativo() != null) {
+				criaCampanhaAplicacao(campanha);
+			} else {
+				criaCampanhaGeral(campanha);
+			}
+		}
 	}
 
 	public void criaCampanhaAplicacao(CampanhaAds campanha) {
 		CampanhaAplicacaoService servico = new CampanhaAplicacaoService();
 		servico.cria(campanha);
-	}
-	
-	
-	public void criaCampanha(List<CampanhaAds> objects) {
-		CampanhaAdsService servico = new CampanhaAdsService();
-		for (CampanhaAds campanha : objects) {
-			servico.cria(campanha);
-			System.out.println("IdAds: " + campanha.getIdAds());
-			campanha.setDataPublicacao(Util.getDataAtualLoopback());
-			campanha.resetSetupCampanha();
-			campanha.save(new VoidCallback() {
-				@Override
-				public void onSuccess() {
-					System.out.print("sucesso - alteracao campanha");
-				}
+		System.out.println("IdAds: " + campanha.getIdAds());
+		campanha.setDataPublicacao(Util.getDataAtualLoopback());
+		campanha.resetSetupCampanha();
+		campanha.resetAnuncioAplicativo();
+		campanha.save(new VoidCallback() {
+			@Override
+			public void onSuccess() {
+				System.out.print("sucesso - alteracao campanha aplicacao");
+			}
 
-				@Override
-				public void onError(Throwable t) {
-					// TODO Auto-generated method stub
-					t.printStackTrace();
-				}
-			});
-			salvaAnuncioCampanha(campanha);
-			salvaPalavraChaveCampanha(campanha);
-		}
+			@Override
+			public void onError(Throwable t) {
+				// TODO Auto-generated method stub
+				t.printStackTrace();
+			}
+		});
+	}
+
+	public void criaCampanhaGeral(CampanhaAds campanha) {
+		CampanhaAplicacaoService servico = new CampanhaAplicacaoService();
+		servico.cria(campanha);
+		System.out.println("IdAds: " + campanha.getIdAds());
+		campanha.setDataPublicacao(Util.getDataAtualLoopback());
+		campanha.resetSetupCampanha();
+		campanha.resetAnuncioAplicativo();
+		campanha.save(new VoidCallback() {
+			@Override
+			public void onSuccess() {
+				System.out.print("sucesso - alteracao campanha geral");
+			}
+
+			@Override
+			public void onError(Throwable t) {
+				// TODO Auto-generated method stub
+				t.printStackTrace();
+			}
+		});
+		salvaAnuncioCampanha(campanha);
+		salvaPalavraChaveCampanha(campanha);
 	}
 
 	private void salvaAnuncioCampanha(CampanhaAds campanha) {
