@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
+import org.joda.time.DateTime;
+
 import com.beust.jcommander.Parameter;
 import com.google.api.ads.adwords.axis.v201809.cm.AdGroup;
 import com.google.api.ads.adwords.axis.v201809.cm.AdGroupAd;
@@ -56,9 +58,7 @@ import com.google.api.ads.adwords.axis.v201809.cm.Language;
 import com.google.api.ads.adwords.axis.v201809.cm.Location;
 import com.google.api.ads.adwords.axis.v201809.cm.MobileApplicationVendor;
 import com.google.api.ads.adwords.axis.v201809.cm.Money;
-import com.google.api.ads.adwords.axis.v201809.cm.NetworkSetting;
 import com.google.api.ads.adwords.axis.v201809.cm.Operator;
-import com.google.api.ads.adwords.axis.v201809.cm.Platform;
 import com.google.api.ads.adwords.axis.v201809.cm.Setting;
 import com.google.api.ads.adwords.axis.v201809.cm.TargetCpaBiddingScheme;
 import com.google.api.ads.adwords.axis.v201809.cm.UniversalAppBiddingStrategyGoalType;
@@ -77,8 +77,136 @@ public class CampanhaAplicacaoService extends AdsService {
 
 	private CampanhaAds campanha = null;
 
+	
 	@Override
 	protected void runExample(AdWordsServicesInterface adWordsServices, AdWordsSession session)
+			throws RemoteException, ApiException {
+		
+		// Get the BudgetService.
+		BudgetServiceInterface budgetService =
+		    adWordsServices.get(session, BudgetServiceInterface.class);
+
+		// Create the campaign budget.
+		Budget budget = new Budget();
+		budget.setName("Interplanetary Cruise App Budget #" + System.currentTimeMillis());
+		Money budgetAmount = new Money();
+		budgetAmount.setMicroAmount(50000000L);
+		budget.setAmount(budgetAmount);
+		budget.setDeliveryMethod(BudgetBudgetDeliveryMethod.STANDARD);
+
+		// Universal app campaigns don't support shared budgets.
+		budget.setIsExplicitlyShared(false);
+		BudgetOperation budgetOperation = new BudgetOperation();
+		budgetOperation.setOperand(budget);
+		budgetOperation.setOperator(Operator.ADD);
+
+		// Add the budget
+		Budget addedBudget = budgetService.mutate(new BudgetOperation[] {budgetOperation}).getValue(0);
+		
+		
+		// Get the CampaignService.
+		CampaignServiceInterface campaignService =
+		    adWordsServices.get(session, CampaignServiceInterface.class);
+
+		// Create the campaign.
+		Campaign campaign = new Campaign();
+		campaign.setName("Interplanetary Cruise App #" + System.currentTimeMillis());
+
+		// Recommendation: Set the campaign to PAUSED when creating it to prevent
+		// the ads from immediately serving. Set to ENABLED once you've added
+		// targeting and the ads are ready to serve.
+		campaign.setStatus(CampaignStatus.PAUSED);
+
+		// Set the advertising channel and subchannel types for universal app campaigns.
+		campaign.setAdvertisingChannelType(AdvertisingChannelType.MULTI_CHANNEL);
+		campaign.setAdvertisingChannelSubType(AdvertisingChannelSubType.UNIVERSAL_APP_CAMPAIGN);
+
+		// Set the campaign's bidding strategy. universal app campaigns
+		// only support TARGET_CPA bidding strategy.
+		BiddingStrategyConfiguration biddingConfig = new BiddingStrategyConfiguration();
+		biddingConfig.setBiddingStrategyType(BiddingStrategyType.TARGET_CPA);
+
+		// Set the target CPA to $1 / app install.
+		TargetCpaBiddingScheme biddingScheme = new TargetCpaBiddingScheme();
+		biddingScheme.setTargetCpa(new Money());
+		biddingScheme.getTargetCpa().setMicroAmount(1000000L);
+
+		biddingConfig.setBiddingScheme(biddingScheme);
+		campaign.setBiddingStrategyConfiguration(biddingConfig);
+
+		// Set the campaign's budget.
+		campaign.setBudget(new Budget());
+		campaign.getBudget().setBudgetId(createBudget(adWordsServices, session));
+
+		// Optional: Set the start date.
+		campaign.setStartDate(new DateTime().plusDays(1).toString("yyyyMMdd"));
+
+		// Optional: Set the end date.
+		campaign.setEndDate(new DateTime().plusYears(1).toString("yyyyMMdd"));
+		
+		// Set the campaign's assets and ad text ideas. These values will be used to
+		// generate ads.
+		UniversalAppCampaignSetting universalAppSetting = new UniversalAppCampaignSetting();
+		universalAppSetting.setAppId("com.labpixies.colordrips");
+		universalAppSetting.setAppVendor(MobileApplicationVendor.VENDOR_GOOGLE_MARKET);
+		universalAppSetting.setDescription1("A cool puzzle game");
+		universalAppSetting.setDescription2("Remove connected blocks");
+		universalAppSetting.setDescription3("3 difficulty levels");
+		universalAppSetting.setDescription4("4 colorful fun skins");
+
+		// Optional: You can set up to 20 image assets for your campaign.
+		// See UploadImage.java for an example on how to upload images.
+		//
+		// universalAppSetting.setImageMediaIds(new long[] { INSERT_IMAGE_MEDIA_ID_HERE });
+		    
+		// Optimize this campaign for getting new users for your app.
+		//universalAppSetting.setUniversalAppBiddingStrategyGoalType(
+		//    UniversalAppBiddingStrategyGoalType.OPTIMIZE_FOR_INSTALL_CONVERSION_VOLUME);
+
+		// If you select the OPTIMIZE_FOR_IN_APP_CONVERSION_VOLUME goal type, then also specify
+		// your in-app conversion types so AdWords can focus your campaign on people who are
+		// most likely to complete the corresponding in-app actions.
+		// Conversion type IDs can be retrieved using ConversionTrackerService.get.
+		//
+		// campaign.selectiveOptimization = new SelectiveOptimization();
+		// campaign.selectiveOptimization.conversionTypeIds =
+//		    new long[] { INSERT_CONVERSION_TYPE_ID_1_HERE, INSERT_CONVERSION_TYPE_ID_2_HERE };
+
+		// Optional: Set the campaign settings for Advanced location options.
+		GeoTargetTypeSetting geoSetting = new GeoTargetTypeSetting();
+		geoSetting.setPositiveGeoTargetType(
+		    GeoTargetTypeSettingPositiveGeoTargetType.LOCATION_OF_PRESENCE);
+		geoSetting.setNegativeGeoTargetType(GeoTargetTypeSettingNegativeGeoTargetType.DONT_CARE);
+
+		campaign.setSettings(new Setting[] {universalAppSetting, geoSetting});
+		   
+		// Create the operation.
+		CampaignOperation operation = new CampaignOperation();
+		operation.setOperand(campaign);
+		operation.setOperator(Operator.ADD);
+
+		CampaignOperation[] operations = new CampaignOperation[] {operation};
+
+		// Add the campaign.
+		CampaignReturnValue result = campaignService.mutate(operations);
+
+		// Display the results.
+		for (Campaign newCampaign : result.getValue()) {
+		  System.out.printf(
+		      "Universal app campaign with name '%s' and ID %d was added.%n",
+		      newCampaign.getName(), newCampaign.getId());
+
+		  // Optional: Set the campaign's location and language targeting. No other targeting
+		  // criteria can be used for universal app campaigns.
+		  setCampaignTargetingCriteria(newCampaign, adWordsServices, session);
+		}
+		    
+	
+	}
+	
+	
+	
+	protected void runExampleOld(AdWordsServicesInterface adWordsServices, AdWordsSession session)
 			throws RemoteException, ApiException {
 
 		CampaignServiceInterface campaignService = adWordsServices.get(session, CampaignServiceInterface.class);
@@ -154,7 +282,7 @@ public class CampanhaAplicacaoService extends AdsService {
 		// Optional: Set the campaign settings for Advanced location options.
 		GeoTargetTypeSetting geoSetting = new GeoTargetTypeSetting();
 		geoSetting.setPositiveGeoTargetType(GeoTargetTypeSettingPositiveGeoTargetType.LOCATION_OF_PRESENCE);
-		geoSetting.setNegativeGeoTargetType(GeoTargetTypeSettingNegativeGeoTargetType.DONT_CARE);
+		//geoSetting.setNegativeGeoTargetType(GeoTargetTypeSettingNegativeGeoTargetType.DONT_CARE);
 
 		campaign.setSettings(new Setting[] { universalAppSetting, geoSetting });
 
