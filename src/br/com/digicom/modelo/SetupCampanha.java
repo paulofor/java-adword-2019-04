@@ -16,9 +16,15 @@ public class SetupCampanha extends Model {
 	
 	private Double maxCpcGrupoAnuncio;
 	
+	private Double custoInstalacao;
 	
 	
-	
+	public Double getCustoInstalacao() {
+		return custoInstalacao;
+	}
+	public void setCustoInstalacao(Double custoInstalacao) {
+		this.custoInstalacao = custoInstalacao;
+	}
 	public Double getMaxCpcGrupoAnuncio() {
 		return maxCpcGrupoAnuncio;
 	}
